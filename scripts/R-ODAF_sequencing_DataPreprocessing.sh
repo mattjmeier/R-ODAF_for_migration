@@ -7,7 +7,7 @@
 #### Settings which need to be adapted by user #####
 ####################################################
 source ${HOME}/miniconda3/etc/profile.d/conda.sh
-project="2021_Fortin_GT21" # $1 # Call script using project name as the only argument
+project="2019_PPAR_agonists" # $1 # Call script using project name as the only argument
 # Specify the directory for the output
 OUTPUT_DIR="${HOME}/shared/projects/${project}/data/output/"
 # Specify location of input fastq files. ALL FILES IN THE FOLDER WILL BE PROCESSED 
@@ -102,7 +102,7 @@ declare QC_DIR_multiQC="${OUTPUTDIR}/MultiQC/"
 declare align_DIR="${OUTPUTDIR}/STAR/"
 declare Quant_DIR="${OUTPUTDIR}/RSEM/"
 declare RSEM_GENOMEDIR="${GENOMEDIR}/RSEM/"
-declare TEMPOSEQR="${HOME}/shared/projects/${project}/scripts/pete.star.script_v3.1.R"
+declare TEMPOSEQR="${HOME}/shared/projects/${project}/scripts/TempO-SeqR_v3.1.R"
 declare TEMPOSEQFIGS="${HOME}/shared/projects/${project}/scripts/generate_figures.R"
 
 declare SUFFIX1=${SUFFIX_IN}

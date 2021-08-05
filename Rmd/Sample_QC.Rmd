@@ -1,22 +1,28 @@
 ---
 params:
-  projectdir: "Default"
-  project_name: "Default"
+  projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
+  project_name: "PPAR agonists"        # Change depending on your project name
   clust_method: "spearman" # For clustering
-  tree_height_cutoff: 0.1 # For clustering
-  dendro_color_by: "Group" # Specify how you would like to color the dendrograms
-  nmr_threshold: 100000 # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
-  align_threshold: 0.5 # 50% alignment rate for TempO-Seq Experiments
-  gini_cutoff: 0.99
-  sampledata_sep: "\t" # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
-  groups: ["Group", "Timepoint", "Treatment"]
-  batch_var: NULL #"batch"
-  dose: NULL # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "Treatment"
-  Platform: "RNA-Seq" # TempO-Seq Or RNA-Seq
+  tree_height_cutoff: 0.1  # For clustering
+  dendro_color_by: "group" # Specify how you would like to color the dendrograms
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
+  gini_cutoff: 0.95
+  sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+  groups:                 # These should be "interesting" groups for your analysis. Group together for exploring covariation.
+    value:
+      1: ["chemical", "Time", "dose"]
+      2: ["I7_Index_ID","I5_Index_ID"] 
+      3: ["row","column"]
+  batch_var: NULL          # "batch"
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "group"
+  Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  # Column names for metadata, if applicable
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
+  collapse_replicates: F
 output:
   html_document:
     toc: true
@@ -136,13 +142,16 @@ if (Platform == "TempO-Seq") {
       results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
       return(results)
     }
-    sampleData <- collapse_reps(SampleDataFile)
+    if (params$collapse_replicates == T) {
+      sampleData <- collapse_reps(SampleDataFile)
+      write.table(sampleData,
+                  file = file.path(paths$processed,"count_table.csv"),
+                  sep = ",",
+                  quote = F,
+                  row.names = F)
+      }
     MappedUnmapped <- collapse_reps(MappedUnmapped)
-    write.table(sampleData,
-                file = file.path(paths$processed,"count_table.csv"),
-                sep = ",",
-                quote = F,
-                row.names = F)
+
     write.table(MappedUnmapped,
                 file = file.path(paths$processed,"mapped_unmapped.csv"),
                 sep = ",",
@@ -258,7 +267,7 @@ Technical control samples are colored differently.
 # Function for sorting dendrograms
 ############################################################################
 sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
-
+message(paste0("The treatment variable is: ", treatment_var))
 ############################################################################
 # Re-order the data by group
 ############################################################################
@@ -754,6 +763,7 @@ cor_list <- list()
 for(i in seq_along(facets)) {
   samples_in_facet <- DESeqDesignExpSamples[DESeqDesignExpSamples[treatment_var] == facets[i],
                                             "original_names"]
+  if (length(samples_in_facet) < 2) { next }
   cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
   pca_subset <- rrcov::PcaGrid(t(cpm_subset))
   #biplot <- rrcov::biplot(pca_subset)
@@ -838,9 +848,9 @@ correlation_df <- as.data.frame(correlation_df[,unlist(groups[[1]])], drop = FAL
 
 pheatmap(ref_correlations,
          annotation_col = correlation_df,
-         display_numbers = T,
-         cutree_cols = 2,
-         cutree_rows = 2)
+         display_numbers = T)
+         #cutree_cols = 2, # This is nice to have but won't work with small groups
+         #cutree_rows = 2)
 
 heatmap_colors <- circlize::colorRamp2(c(0.7, 1), c("blue", "red"))
 
@@ -957,7 +967,7 @@ QAQC_annotated <- dplyr::left_join(DESeqDesign,
 
 QAQC_annotated$Any <- apply(QAQC_annotated,
                             MARGIN = 1,
-                            FUN = function(x) ifelse(any(x == "FAIL"),"FAIL","PASS"))
+                            FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
 
 vtree(QAQC_annotated,
       "dendrogram NMR Ncov5 Nsig80 Gini Any",

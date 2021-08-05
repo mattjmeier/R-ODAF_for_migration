@@ -17,9 +17,12 @@ inputFile <- file.path(config$params$projectdir, "Rmd", "Sample_QC.Rmd")
                      config$params$project_name, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
+  
   outFile <- file.path(config$params$projectdir,
                        "reports",
                        filename)
+  
+  dir.create(file.path(config$params$projectdir,"reports"))
   
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
