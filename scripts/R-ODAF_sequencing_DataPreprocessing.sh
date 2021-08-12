@@ -102,8 +102,8 @@ declare QC_DIR_multiQC="${OUTPUTDIR}/MultiQC/"
 declare align_DIR="${OUTPUTDIR}/STAR/"
 declare Quant_DIR="${OUTPUTDIR}/RSEM/"
 declare RSEM_GENOMEDIR="${GENOMEDIR}/RSEM/"
-declare TEMPOSEQR="${HOME}/shared/projects/${project}/scripts/TempO-SeqR_v3.1.R"
-declare TEMPOSEQFIGS="${HOME}/shared/projects/${project}/scripts/generate_figures.R"
+declare TEMPOSEQR="${HOME}/shared/projects/${project}/scripts/temposeq/TempO-SeqR_v3.1.R"
+declare TEMPOSEQFIGS="${HOME}/shared/projects/${project}/scripts/temposeq/generate_figures.R"
 
 declare SUFFIX1=${SUFFIX_IN}
 declare SUFFIX_out="_trimmed${SUFFIX_IN}"
