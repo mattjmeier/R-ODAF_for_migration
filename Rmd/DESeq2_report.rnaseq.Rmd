@@ -85,7 +85,7 @@ if (is.na(params$group_facet)) {
                              "/DEG_output/group_",
                              paste(params$group_filter, collapse = "_"))
 }
-paths$BMD_output <- paste0(paths$DEG_output, "/BMD_and_biomarker_files")
+paths$BMD_output <- paste0(paths$root, "/DEG_output/BMD_and_biomarker_files")
 paths$pathway_analysis <- paste0(paths$DEG_output, "/pathway_analysis")
 paths$RData <- paste0(paths$DEG_output, "/RData")
 
