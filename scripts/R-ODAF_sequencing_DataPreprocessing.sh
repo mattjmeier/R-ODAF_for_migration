@@ -386,11 +386,11 @@ fi
 # Run MultiQC on outputs
 multiqc \
 --cl_config "extra_fn_clean_exts: { '_fastp.json' }" \
---cl_config "sample_names_replace_exact: {True}" \
+--cl_config "sample_names_replace_exact: True" \
 ${BASEDIR} \
 --filename MultiQC_Report.html \
 --interactive \
---sample-names "${RAW_SAMPLE_DIR}/../../metadata/metadata.txt" \
+--replace-names "${RAW_SAMPLE_DIR}/../../metadata/metadata.multiqc.txt" \
 --outdir ${QC_DIR_multiQC}
 
 ###################################################################################################
