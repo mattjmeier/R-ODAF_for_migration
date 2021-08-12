@@ -8,7 +8,7 @@ This section uses clusterProfiler to detect enriched gene sets using [WikiPathwa
 entrez_IDs <- as.character(id_table_entrez$entrezgene_id)
 entrezDEGs <- dplyr::left_join(significantResults,
                                id_table_entrez,
-                               by=biomart_filter)
+                               by = biomart_filter)
 entrezDEGs <- as.vector(entrezDEGs$entrezgene_id)
 
 #Wiki <- rWikiPathways::downloadPathwayArchive(organism=species_sci, format = "gmt", destpath = paths$DEG_output, date="20210310")

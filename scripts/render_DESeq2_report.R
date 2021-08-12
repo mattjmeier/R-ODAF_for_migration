@@ -7,7 +7,7 @@ config <- yaml::read_yaml(file.path(here::here(),
                                     "Rmd/config.yml"),
                           eval.expr = T)
 
-skip_extra <- NULL # "DMSO" # Remove DMSO controls as a facet
+skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 
 # Input file - Rmd
 inputFile <- file.path(config$params$projectdir, "Rmd", "DESeq2_report.rnaseq.Rmd")

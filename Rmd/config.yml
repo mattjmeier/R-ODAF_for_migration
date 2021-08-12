@@ -1,16 +1,16 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "PPAR Agonists"        # Change depending on your project name
+  project_name: "OPE_flame_retardants_KGN_cells"        # Change depending on your project name
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  nuisance:  NA                  # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
+  nuisance:  "batch"                  # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   flag: TRUE                     # runs all analysis by default when set to TRUE
-  platform: "RNA-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: "group"       #!expr NA # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
+  group_facet: "chemical"       #!expr NA # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  !expr NA        # !expr NA # Which group will this report be done on?
-  strict_contrasts: TRUE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
+  strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !expr NA      # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !expr NA       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  !expr NA # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
