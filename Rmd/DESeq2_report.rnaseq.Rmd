@@ -1464,11 +1464,10 @@ rld_degs_names <- significantResults[[biomart_filter]]
 if (length(rld_degs_names) > 0) {
   rld_degs <- rld[row.names(assay(rld)) %in% significantResults[[biomart_filter]],] 
   # d[ d[[THECOLUMN]] == someValue , ]
-
   ## Perform PCA analysis and make plot
-  plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs)) +
-    theme(legend.position = "bottom") +
-    guides(color = guide_legend(ncol = 3))
+  print(plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs)) +
+          theme(legend.position = "bottom") +
+          guides(color = guide_legend(ncol = 3)))
   PCAplotDEGs <- plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs), returnData = TRUE)
 
   ## Get percent of variance explained
