@@ -39,6 +39,10 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+# snakemake stuff
+.snakemake
+*.log
+
 # Custom
 *fq
 *fq.gz
@@ -60,3 +64,5 @@ paths.txt
 /metadata/metadata.txt
 /metadata/contrasts.txt
 /data/processed/genes.data.tsv
+/data/processed
+/logs/
