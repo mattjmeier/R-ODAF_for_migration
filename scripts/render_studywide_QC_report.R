@@ -12,7 +12,7 @@ inputFile <- file.path(config$params$projectdir, "Rmd", "Sample_QC.Rmd")
 
   message("Writing QC report for all samples in the experiment.")
   # Output file - HTML
-  filename <- paste0("Study-wide_Sample_QC.",
+  filename <- paste0("Study-wide_Sample_QC",
                      config$params$platform, "_",
                      config$params$project_name, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),

@@ -35,7 +35,7 @@ output:
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
 title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "OPE TempO-Seq"
+subtitle: "`r paste(params$Platform)`"
 author: "Matthew J. Meier"
 ---
 
