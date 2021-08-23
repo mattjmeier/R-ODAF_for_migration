@@ -8,8 +8,8 @@ params:
   nuisance:  !r NA #"Batch" To remove batch effects for PCA/Heatmaps visualiziations
   flag: TRUE                  # runs all analysis by default when set to TRUE
   platform: "TempO-Seq"         # RNA-Seq or TempO-Seq
-  group_facet: "chemical" #!r NA          # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "TMPP" # !r NA  Which group will this report be done on?
+  group_facet: "chemical_time" #!r NA          # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  "Estradiol 24 h" # !r NA  Which group will this report be done on?
   strict_contrasts: F # If TRUE, use BOTH columns (exp, cont) of contrasts file to limit what is included in the report. Use with caution!
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
@@ -160,7 +160,11 @@ if (species == "human") {
   ensembl_species <- "hsapiens_gene_ensembl"
   species_gene_symbol <- "external_gene_name"
   kegg_organism <- "hsa"
-  temposeq_manifest <- "191113_Human_S1500_Surrogate_2.0_Manifest.csv" # options: "191113_Human_S1500_Surrogate_2.0_Manifest.csv" "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  temposeq_manifest <- "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # options:
+  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
 } else {
   if (species == "mouse") {
     # Mouse:
@@ -371,25 +375,32 @@ if (Platform == "RNA-Seq") {
   MinCount <- 0.5
   alpha <- pAdjValue <- 0.05 
   linear_fc_filter <- 1.5
-  biomart_filter <- "PROBE_NAME"
-  
   biospyder <- read.delim(file.path(params$biospyder_dbs, temposeq_manifest), # Assay manifest...
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,
                           quote = "\"")
-  
+  # Annoyingly, the manifests are different depending on platform and version.
+  if (colnames(biospyder)[1] == "PROBE_NAME") {
+    biospyder_ID = "ENSEMBL_GENE_ID"
+    biomart_filter <- "PROBE_NAME"
+    biospyder_filter = "ensembl_gene_id"
+  } else if (colnames(biospyder)[1] == "Probe.name") {
+    biospyder_ID = "Reference.Transcript"
+    biomart_filter = "Probe.name"
+    biospyder_filter = "refseq_mrna"
+  }
   # Fill in the blanks for TempO-Seq Manifest...
   # Set NULL values to NA
   biospyder[ biospyder == "NULL" ] <- NA
   
   # Separate out the coordinates into useful columns
-  biospyder <- biospyder %>%
-    separate(PROBE_COORDINATE, into = c("chr","pos","strand"), sep = ":" ) %>%
-    separate(pos, into = c("start","end"), sep = "-") %>%
-    mutate(start = as.numeric(start)) %>%
-    mutate(end = as.numeric(end)) %>%
-    mutate(strand = ifelse(strand == "-","-1","1"))
+  # biospyder <- biospyder %>%
+  #   separate(PROBE_COORDINATE, into = c("chr","pos","strand"), sep = ":" ) %>%
+  #   separate(pos, into = c("start","end"), sep = "-") %>%
+  #   mutate(start = as.numeric(start)) %>%
+  #   mutate(end = as.numeric(end)) %>%
+  #   mutate(strand = ifelse(strand == "-","-1","1"))
 
 ##### NEEDS WORK - Use bitr instead?
   
@@ -551,7 +562,7 @@ sampledata_in_metadata <- all(colnames(sampleData) %in% DESeqDesign$original_nam
 removed <- colnames(sampleData[which(!colnames(sampleData) %in% DESeqDesign$original_names)])
 # Reorder the metadata table to correspond to the order of columns in the count data
 DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-DESeqDesign <- na.omit(DESeqDesign)
+# DESeqDesign <- na.omit(DESeqDesign) # This can cause issues since it removes any lines with missing data. Should instead check for NAs in required columns.
 sampleData <- sampleData[,DESeqDesign$original_names]
 samples_after <- nrow(DESeqDesign)
 
@@ -878,11 +889,11 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	currentContrast <- c(DESIGN, condition2, condition1)
 	bpparam <- MulticoreParam(params$cpus)
 	res <- DESeq2::results(dds[rownames(compte),],
-	               parallel = TRUE,
-	               BPPARAM = bpparam,
-	               contrast = currentContrast,
-	               pAdjustMethod = 'fdr',
-	               cooksCutoff = cooks) # If Cooks cutoff disabled - manually inspect.
+	                       parallel = TRUE,
+	                       BPPARAM = bpparam,
+	                       contrast = currentContrast,
+	                       pAdjustMethod = 'fdr',
+	                       cooksCutoff = cooks) # If Cooks cutoff disabled - manually inspect.
 	res <- lfcShrink(dds = dds[rownames(compte),],
 	                 contrast = currentContrast,
 	                 res = res,
@@ -1034,20 +1045,25 @@ genes <- unlist(genes) %>% unique()
 #   } else {
 
 if (Platform == "TempO-Seq") {
-  genes <- biospyder[biospyder$PROBE_NAME %in% genes,] %>% pull(ENSEMBL_GENE_ID)
-  id_table_entrez <- getBM(filters = "ensembl_gene_id",
-                        attributes = c("ensembl_gene_id",
+  genes <- biospyder[biospyder[[biomart_filter]] %in% genes,] %>% pull(!!ensym(biospyder_ID))
+  id_table_entrez <- getBM(filters = biospyder_filter,
+                        attributes = c(biospyder_filter,
                                       species_gene_symbol,
                                       "description",
                                       "entrezgene_id",
-                                      "entrezgene_accession"),
+                                      "ensembl_gene_id"), # in case not included
                         values = genes,
                         mart = ensembl)
   save(id_table_entrez, file = file.path(paths$RData, "id_table.Rdata"))
   # Add probe ID to annotations for future ability to link them
   id_table_entrez <- id_table_entrez %>%
-    dplyr::left_join(biospyder, by = c("ensembl_gene_id" = "ENSEMBL_GENE_ID"))
-  id_table <- id_table_entrez[, c(8,1:3)] # Manageable subset of the annotations
+    dplyr::left_join(biospyder,
+                     by = setNames(biospyder_ID, biospyder_filter) )
+  # Note that the setNames() function above actually reverses the arguments...
+  id_table <- id_table_entrez[, c(biomart_filter,
+                                  "ensembl_gene_id",
+                                  species_gene_symbol,
+                                  "description")] # Manageable subset of the annotations
 } else {
   id_table_entrez <- getBM(filters = biomart_filter,
                         attributes = c(biomart_filter,
@@ -1105,6 +1121,8 @@ annotate_deseq_table <- function(deseq_results_list, filter_results = F) {
                                                               -1 / (2 ^ log2FoldChange)))
       if (Platform == "TempO-Seq") {
         deg_table <- deg_table[, c(1, 8:10, 2, 3, 11, 4:7)]
+        # Depends on whether you include extra column for ensembl...
+        # deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
       } else {
         deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
       }
@@ -1617,11 +1635,15 @@ get_clean_names <- function(vector_of_names) {
     dplyr::select(!!ensym(biomart_filter),
                   !!ensym(species_gene_symbol))
   hm_names <- dplyr::left_join(hm_names,
-                                        heatmap_annotation_table,
-                                        by = biomart_filter) %>%
+                               heatmap_annotation_table,
+                               by = biomart_filter) %>%
     dplyr::distinct() %>%
     dplyr::group_by(!!ensym(biomart_filter)) %>%
-    dplyr::mutate(combined = paste0(!!ensym(species_gene_symbol), collapse = ", ")) %>%
+    # May be tricky to determine if more than one gene should be combined in a row.
+    # Instead, currently using first non-NA value, since it's possible to have NAs sneak in
+    # particularly at this point... high variance genes might not be picked up as DEGs.
+    #dplyr::mutate(combined = paste0(!!ensym(species_gene_symbol), collapse = ", ")) %>%
+    dplyr::mutate(combined = coalesce(!!ensym(species_gene_symbol), !!ensym(biomart_filter))) %>%
     dplyr::select(-!!ensym(species_gene_symbol)) %>%
     dplyr::distinct() %>%
     dplyr::pull(combined)
@@ -1829,7 +1851,7 @@ searchURL <- "http://www.ncbi.nlm.nih.gov/gene/?term="
 ## Add search url if appropriate
 res.df.dt <- res.df
 if (!is.null(searchURL)) {
-    res.df.dt$ensembl_gene_id <- paste0('<a href="',
+    res.df.dt$Gene <- paste0('<a href="',
                              searchURL,
                              res.df.dt$ensembl_gene_id,
                              '" rel="noopener noreferrer" target="_blank">',
@@ -1837,11 +1859,17 @@ if (!is.null(searchURL)) {
                              '<br/>',
                              res.df.dt[[species_gene_symbol]],
                              '</a>')
+    res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
 }
 
-res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'], scientific = TRUE, digits = digits)
-res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'], scientific = TRUE, digits = digits)
-res.df.dt <- res.df.dt %>% dplyr::select(-c(description, !!ensym(species_gene_symbol)))
+res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
+                              scientific = TRUE,
+                              digits = digits)
+res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
+                                scientific = TRUE,
+                                digits = digits)
+res.df.dt <- res.df.dt %>%
+  dplyr::select(-c(!!ensym(species_gene_symbol), !!ensym(biomart_filter), ensembl_gene_id))
 
 DT::datatable(res.df.dt,
           options = list(pagingType = 'full_numbers',
@@ -1859,13 +1887,14 @@ DT::datatable(res.df.dt,
           extensions = 'Buttons',
           rownames = FALSE,
           filter = "top",
-          colnames = c('Gene' = 'ensembl_gene_id')) %>% 
+          # colnames = c('Gene' = 'ensembl_gene_id') # hopefully don't need this now...
+          ) %>% 
   DT::formatRound(which(!colnames(res.df.dt) %in% c('pvalue',
                                                     'padj',
                                                     'Feature',
                                                     'contrast',
                                                     'description',
-                                                    'ensembl_gene_id',
+                                                    'Gene',
                                                     'external_gene_name')),
                   digits)
 
