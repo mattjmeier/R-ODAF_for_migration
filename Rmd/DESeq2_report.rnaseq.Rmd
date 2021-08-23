@@ -7,17 +7,17 @@ params:
   intgroup: ["group"]           # experimental group of interest plus covariates; can be more than one
   nuisance:  !r NA #"Batch" To remove batch effects for PCA/Heatmaps visualiziations
   flag: TRUE                  # runs all analysis by default when set to TRUE
-  platform: "TempO-Seq"         # RNA-Seq or TempO-Seq
-  group_facet: "chemical_time" #!r NA          # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "Estradiol 24 h" # !r NA  Which group will this report be done on?
+  platform: "RNA-Seq"         # RNA-Seq or TempO-Seq
+  group_facet: "timepoint" #!r NA  # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  "0 hr"# !r NA # Optional. Only look at a particular group within a facet.
   strict_contrasts: F # If TRUE, use BOTH columns (exp, cont) of contrasts file to limit what is included in the report. Use with caution!
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  !r NA # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
   include_only_group:  !r NA # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
   use_cached_RData: FALSE # If possible, load the saved RData for dds object and gene IDs
-  cpus: 39 # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
-  run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
+  cpus: 12 # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: FALSE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
   nBestFeatures: 20 # The number of best features to make plots of their counts
@@ -105,6 +105,7 @@ embedFiles = FALSE
 # Se this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
 R_ODAF_plots = FALSE
 pathway_analysis <- file.path(paths$root, "Rmd/Pathway_analysis.Rmd")
+  
 ```
 
 ```{r 'warn_user', eval=!flag}
@@ -134,6 +135,7 @@ library('viridis')
 library('sessioninfo')
 library('plotly')
 library('dendextend')
+library('gtools')
 #library('RMariaDB')
 
 # Bioinformatics-specific
@@ -304,6 +306,16 @@ DESeqDesignAsRead <- DESeqDesign
 # 2. Filter manually - useful for removing irrelevant control groups (e.g. reference RNA). params$exclude_groups
 # Note that these should only be run if the respective variables are set.
 if (!is.na(params$group_facet)) {
+  # do some error checking to make sure the filter and contrasts are set correctly
+  if(is.na(params$group_filter)){
+    stop("group_facet was set but group_filter is NA! You should probably be running this from another script.")
+  }
+  # check that group_filter is actually one of the facets
+  all_facets = DESeqDesign %>% pull(params$group_facet) %>% unique()
+  if(!params$group_filter %in% all_facets){
+    stop(paste("group_filter", params$group_filter, "not found in group_facet", params$group_facet))
+  }
+  
   contrasts_to_filter <- DESeqDesign %>%
   dplyr::filter(!!sym(params$group_facet) %in% params$group_filter) %>% # NOTE: Not sure if %in% or == is better here.
   pull(params$design) %>% 
@@ -341,12 +353,13 @@ if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
 # If there is a dose column, reorder the contrast list by dose
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
-  ordered_by_dose <- DESeqDesign[order(DESeqDesign[doseCol]),] %>%
+  ordered_by_dose <- DESeqDesign[mixedorder(DESeqDesign[,doseCol]),] %>%
     dplyr::select(params$design) %>%
     dplyr::pull()
   contrasts <- contrasts %>%
     dplyr::slice(match(ordered_by_dose, V1)) %>%
     unique()
+  
 }
 
 # Once contrasts have been filtered, generate short contrast names for report.
@@ -580,7 +593,7 @@ if (!is.na(params$design)) {
                     pattern = "dose",
                     ignore.case = T)
     design_factor_reordered <- factor(DESeqDesign[[params$design]],
-                                      levels = unique(DESeqDesign[[params$design]][order(DESeqDesign[[doseCol]])]),
+                                      levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[doseCol]])]),
                                       ordered = FALSE)
     DESeqDesign[[params$design]] <- design_factor_reordered
   } else {
