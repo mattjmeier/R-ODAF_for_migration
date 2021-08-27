@@ -10,6 +10,7 @@ params:
   platform: "RNA-Seq"         # RNA-Seq or TempO-Seq
   group_facet: "timepoint" #!r NA  # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  "0 hr"# !r NA # Optional. Only look at a particular group within a facet.
+  sortcol: "dose"
   strict_contrasts: F # If TRUE, use BOTH columns (exp, cont) of contrasts file to limit what is included in the report. Use with caution!
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
@@ -585,7 +586,6 @@ head(colnames(sampleData)) # Output should match
 DESeqDesign[intgroup] <- lapply(DESeqDesign[intgroup], factor)
 if (!is.na(params$design)) {
   if(!is.na(params$sortcol)){
-    sortcol = params$sortgroup
     design_factor_reordered <- factor(DESeqDesign[[params$design]],
                                       levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[params$sortcol]])]),
                                       ordered = FALSE)
