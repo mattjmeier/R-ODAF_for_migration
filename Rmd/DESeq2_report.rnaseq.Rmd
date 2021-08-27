@@ -136,6 +136,7 @@ library('sessioninfo')
 library('plotly')
 library('dendextend')
 library('gtools')
+library('ggridges')
 #library('RMariaDB')
 
 # Bioinformatics-specific
@@ -158,7 +159,7 @@ if (species == "human") {
   library('org.Hs.eg.db')
   orgdb <- "org.Hs.eg.db"
   species_sci <- "Homo sapiens"
-  wiki <- "wikipathways-20210610-gmt-Homo_sapiens.gmt"
+  wiki <- "wikipathways-20210810-gmt-Homo_sapiens.gmt"
   ensembl_species <- "hsapiens_gene_ensembl"
   species_gene_symbol <- "external_gene_name"
   kegg_organism <- "hsa"
@@ -173,7 +174,7 @@ if (species == "human") {
     library('org.Mm.eg.db')
     orgdb <- "org.Mm.eg.db"
     species_sci <- "Mus musculus"
-    wiki <- "wikipathways-20210610-gmt-Mus_musculus.gmt"
+    wiki <- "wikipathways-20210810-gmt-Mus_musculus.gmt"
     ensembl_species <- "mmusculus_gene_ensembl"
     species_gene_symbol <- "mgi_symbol"
     kegg_organism <- "mmu"
@@ -184,7 +185,7 @@ if (species == "human") {
     library('org.Rn.eg.db')
     orgdb <- "org.Rn.eg.db"
     species_sci <- "Rattus norvegicus"
-    wiki <- "wikipathways-20210610-gmt-Rattus_norvegicus.gmt"
+    wiki <- "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
     ensembl_species <- "rnorvegicus_gene_ensembl"
     species_gene_symbol <- "rgd_symbol"
     kegg_organism <- "rno"
@@ -350,16 +351,14 @@ if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
   contrasts <- contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
 }
 
-# If there is a dose column, reorder the contrast list by dose
-if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
-  doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
-  ordered_by_dose <- DESeqDesign[mixedorder(DESeqDesign[,doseCol]),] %>%
+# reorder contrast list by the specified column
+if(!is.na(params$sortcol)){
+  ordered_design <- DESeqDesign[mixedorder(DESeqDesign[,params$sortcol]),] %>%
     dplyr::select(params$design) %>%
     dplyr::pull()
   contrasts <- contrasts %>%
-    dplyr::slice(match(ordered_by_dose, V1)) %>%
+    dplyr::slice(match(ordered_design, V1)) %>%
     unique()
-  
 }
 
 # Once contrasts have been filtered, generate short contrast names for report.
@@ -585,19 +584,12 @@ head(colnames(sampleData)) # Output should match
 # Intgroups need to be factors for DESeq2
 DESeqDesign[intgroup] <- lapply(DESeqDesign[intgroup], factor)
 if (!is.na(params$design)) {
-  # If there is a dose column, reorder the experimental group (DESIGN) by dose.
-  if (any(grepl(x = colnames(DESeqDesign),
-                pattern = "dose",
-                ignore.case = T))) {
-    doseCol <- grep(x = colnames(DESeqDesign),
-                    pattern = "dose",
-                    ignore.case = T)
+  if(!is.na(params$sortcol)){
+    sortcol = params$sortgroup
     design_factor_reordered <- factor(DESeqDesign[[params$design]],
-                                      levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[doseCol]])]),
+                                      levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[params$sortcol]])]),
                                       ordered = FALSE)
     DESeqDesign[[params$design]] <- design_factor_reordered
-  } else {
-    DESeqDesign[params$design] <- factor(DESeqDesign[, params$design])
   }
 }
 
